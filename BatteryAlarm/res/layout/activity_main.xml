@@ -43,7 +43,7 @@
         android:textOff="@string/string_service_is_off"
         android:textOn="@string/string_service_is_on" />
 
-    <de.kraflapps.apps.batteryalarm.CustomAutoCompleteView
+    <AutoCompleteTextView
         android:id="@+id/fieldSendTo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -53,6 +53,6 @@
         android:ems="10" >
 
         <requestFocus />
-    </de.kraflapps.apps.batteryalarm.CustomAutoCompleteView>
+    </AutoCompleteTextView>
 
 </RelativeLayout>

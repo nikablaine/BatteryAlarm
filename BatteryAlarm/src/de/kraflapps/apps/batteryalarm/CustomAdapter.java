@@ -32,12 +32,12 @@ public class CustomAdapter extends ArrayAdapter<CustomContact> implements Filter
 	    
 	    @Override
 	    public int getCount() {
-	    	   return cntArrList.size();
+	    	   return mOriginalValues.size();
 	    	}
 	    
 	    @Override
 	    public CustomContact getItem(int position) {
-	        return cntArrList.get(position);
+	        return mOriginalValues.get(position);
 	    }
 
 	    public static class ViewHolder {
@@ -169,12 +169,17 @@ public class CustomAdapter extends ArrayAdapter<CustomContact> implements Filter
 	            holder = (ViewHolder) convertView.getTag();
 	        }
 	        
-	        CustomContact cnt = cntArrList.get(position);
+	        if (position < cntArrList.size()){
 	        
-	        holder.name.setText(cnt.getName());
-	        holder.email.setText(cnt.getEmail());
-	        holder.type.setText(cnt.getType());
+	        	CustomContact cnt = cntArrList.get(position);
+		        
+		        holder.name.setText(cnt.getName());
+		        holder.email.setText(cnt.getEmail());
+		        holder.type.setText(cnt.getType());
 
-	        return convertView;
+
+	        }
+	        
+      	        return convertView;
 	    }
 	}
