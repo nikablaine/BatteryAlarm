@@ -32,7 +32,7 @@ public class CustomAdapter extends ArrayAdapter<CustomContact> implements Filter
 	    
 	    @Override
 	    public int getCount() {
-	    	   return mOriginalValues.size();
+	    	   return cntArrList.size();
 	    	}
 	    
 	    @Override
@@ -111,7 +111,7 @@ public class CustomAdapter extends ArrayAdapter<CustomContact> implements Filter
 	                ArrayList<CustomContact> values = mOriginalValues;
 	                int count = values.size();
 
-	                ArrayList<CustomContact> newValues = new ArrayList<CustomContact>(count);
+	                ArrayList<CustomContact> newValues = new ArrayList<CustomContact>();
 
 	                for (int i = 0; i < count; i++) {
 	                    CustomContact item = values.get(i);
