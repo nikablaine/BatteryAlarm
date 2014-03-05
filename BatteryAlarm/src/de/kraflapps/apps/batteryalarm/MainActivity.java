@@ -20,11 +20,14 @@ import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningServiceInfo;
+import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,14 +38,24 @@ import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.CursorAdapter;
 import android.widget.EditText;
+import android.widget.NumberPicker;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.SimpleCursorAdapter;
 import android.widget.Spinner;
+import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
 public class MainActivity extends Activity {
 
+	public final int MAX_PERCENTAGE_VALUE = 100;
+	public final int MIN_PERCENTAGE_VALUE = 0;
+	public final int CUR_PERCENTAGE_VALUE = 30;
+	
+	public Context mContext = this;
+	
 	ProgressBar prgrBar = null;
 	EditText fieldPercentageAlarm;
 	AutoCompleteTextView fieldSendTo;
@@ -54,7 +67,10 @@ public class MainActivity extends Activity {
 	String textRecepient = null;
 	String textPercentageAlarm = null;
 
-	ToggleButton tglBtnStartService;
+	Switch swServiceState;
+	
+	TextView tvPercentage = null;
+	TextView tvSetPercentage = null;
 	
 	ArrayList<CustomContact> contactList;
 	ArrayAdapter<CustomContact> contactListAdapter;
@@ -66,14 +82,19 @@ public class MainActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		tglBtnStartService = (ToggleButton) findViewById(R.id.toggleButtonStart);
-		fieldPercentageAlarm = (EditText) findViewById(R.id.fieldPercentageAlarm);
+		swServiceState = (Switch) findViewById(R.id.swServiceState);
 		fieldSendTo = (AutoCompleteTextView) findViewById(R.id.fieldSendTo);
+		tvPercentage = (TextView) findViewById(R.id.tvPercentage);
+		tvSetPercentage = (TextView) findViewById(R.id.tvSetPercentage);
 
 		spnrAccnt = (Spinner) findViewById(R.id.spinnerAccounts);
 
 		prgrBar = (ProgressBar) findViewById(R.id.progressBar);
 		prgrBar.setVisibility(View.GONE);
+		
+		tvPercentage.setText("Set to " + CUR_PERCENTAGE_VALUE + "%");
+		
+		tvSetPercentage.setOnClickListener(btrLvlPickerListener);
 		
 		contactList = new ArrayList<CustomContact>();
 
@@ -128,9 +149,9 @@ public class MainActivity extends Activity {
 
 		spnrAccnt.setAdapter(adapter);
 		
-		setTglBtnServiceSetCheck(tglBtnStartService);
+		//setTglBtnServiceSetCheck(tglBtnStartService);
 
-		tglBtnStartService.setOnCheckedChangeListener(tglBtnServiceListener);
+		swServiceState.setOnCheckedChangeListener(tglBtnServiceListener);
 
 	}
 
@@ -312,6 +333,48 @@ public class MainActivity extends Activity {
 			Intent intent = new Intent(Intent.ACTION_PICK,
 					ContactsContract.Contacts.CONTENT_URI);
 			startActivityForResult(intent, 100);
+		}
+	};
+	
+	private OnClickListener btrLvlPickerListener = new OnClickListener() {
+		
+		@Override
+		public void onClick(View v) {
+			RelativeLayout linearLayout = new RelativeLayout(mContext);
+			final NumberPicker numPicker = new NumberPicker(getApplicationContext());
+			numPicker.setMaxValue(MAX_PERCENTAGE_VALUE);
+			numPicker.setMinValue(MIN_PERCENTAGE_VALUE);
+			numPicker.setValue(CUR_PERCENTAGE_VALUE);
+			
+	        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(50, 50);
+	        RelativeLayout.LayoutParams numPicerParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+	        numPicerParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
+
+	        linearLayout.setLayoutParams(params);
+	        linearLayout.addView(numPicker, numPicerParams);
+
+	        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(mContext);
+	        alertDialogBuilder.setTitle("Select the number");
+	        alertDialogBuilder.setView(linearLayout);
+	        alertDialogBuilder
+	                .setCancelable(false)
+	                .setPositiveButton("Ok",
+	                        new DialogInterface.OnClickListener() {
+	                            public void onClick(DialogInterface dialog,
+	                                                int id) {
+	                                Log.e("","New Quantity Value : "+ numPicker.getValue());
+
+	                            }
+	                        })
+	                .setNegativeButton("Cancel",
+	                        new DialogInterface.OnClickListener() {
+	                            public void onClick(DialogInterface dialog,
+	                                                int id) {
+	                                dialog.cancel();
+	                            }
+	                        });
+	        AlertDialog alertDialog = alertDialogBuilder.create();
+	        alertDialog.show();			
 		}
 	};
 

@@ -6,9 +6,14 @@
     <string name="hello_world">Hello world!</string>
     <string name="start_service">Start Service</string>
     <string name="percentage_alarm">101</string>
-    <string name="send_to">Recepient</string>
+    <string name="string_send_to">Send alarm message to</string>
     <string name="string_service_is_on">Service is ON</string>
 	<string name="string_service_is_off">Service is OFF</string>
+	<string name="string_connect_as">Connect as</string>
+	<string name="string_battery_level">Critical battery level</string>
+	<string name="string_set_new_critical_level"><u>Set new value</u></string>
+	<string name="string_service_state">Service state</string>
+	<string name="string_slide_to_change">Slide to start/stop</string>
 	<string name="mail_type_home">HOME</string>
     <string name="mail_type_work">WORK</string>
     <string name="mail_type_other">OTHER</string>
