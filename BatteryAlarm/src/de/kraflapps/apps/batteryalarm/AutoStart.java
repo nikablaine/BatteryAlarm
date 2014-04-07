@@ -19,7 +19,7 @@ public class AutoStart extends BroadcastReceiver {
 	        if (prefs.getBoolean("serviceIsOn", false)) {
 	        	Intent intentForAlarmService = new Intent(context, AlarmService.class);
 				context.startService(intentForAlarmService);
-				alarm.SetAlarm(context);
+				alarm.setAlarm(context);
 	        }
 		}
 	}

@@ -3,24 +3,19 @@ package de.kraflapps.apps.batteryalarm;
 
 import java.io.FileOutputStream;
 import java.io.UnsupportedEncodingException;
-import java.util.Date;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import javax.mail.Message;
 import javax.mail.MessagingException;
-import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
-import javax.mail.Transport;
 import javax.mail.URLName;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-
-import com.sun.mail.smtp.SMTPTransport;
-import com.sun.mail.util.BASE64EncoderStream;
 
 import android.app.IntentService;
 import android.content.Context;
@@ -30,6 +25,9 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.preference.PreferenceManager;
+
+import com.sun.mail.smtp.SMTPTransport;
+import com.sun.mail.util.BASE64EncoderStream;
 
 public class BatteryStatePullService extends IntentService {
 	

@@ -1,181 +1,182 @@
 package de.kraflapps.apps.batteryalarm;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
-import com.google.android.gms.auth.GoogleAuthException;
-import com.google.android.gms.auth.GoogleAuthUtil;
-import com.google.android.gms.auth.GooglePlayServicesAvailabilityException;
-import com.google.android.gms.auth.UserRecoverableAuthException;
-import com.sun.mail.imap.protocol.FLAGS;
-
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.provider.ContactsContract;
-import android.provider.ContactsContract.CommonDataKinds.Email;
-import android.provider.ContactsContract.Contacts;
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningServiceInfo;
-import android.app.AlertDialog;
-import android.content.ContentResolver;
+import android.app.FragmentManager;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.database.Cursor;
-import android.util.Log;
+import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.provider.ContactsContract;
 import android.view.Menu;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.CursorAdapter;
 import android.widget.EditText;
-import android.widget.NumberPicker;
+import android.widget.MultiAutoCompleteTextView;
 import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
-import android.widget.SimpleCursorAdapter;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
-public class MainActivity extends Activity {
+import com.google.android.gms.auth.GoogleAuthUtil;
+import com.google.android.gms.auth.UserRecoverableAuthException;
 
-	public final int MAX_PERCENTAGE_VALUE = 100;
-	public final int MIN_PERCENTAGE_VALUE = 0;
-	public final int CUR_PERCENTAGE_VALUE = 30;
+public class MainActivity extends Activity implements AsyncResult {
+
+	public final static int MAX_PERCENTAGE_VALUE = 100;
+	public final static int MIN_PERCENTAGE_VALUE = 0;
+	public final static int CUR_PERCENTAGE_VALUE = 30;
+	
+	public final static int REQUEST_AUTHORIZATION = 11;
+	public final static int REQUEST_PERCENTAGE_CHANGE = 22;
+	
+	public final static String CONTACT_LIST = "de.kraflapps.apps.batteryalarm.contact_list";
+	
+	public final static String TAG = "Battery-Alarm-App";
+	
+	private static final String DIALOG_NUMBER = "number";
 	
 	public Context mContext = this;
 	
+	private SharedPreferences mPreferences;
+	
+	ContactListLoader contactLoaderTask = new ContactListLoader(this);
+	
+	
 	ProgressBar prgrBar = null;
 	EditText fieldPercentageAlarm;
-	AutoCompleteTextView fieldSendTo;
+	MultiAutoCompleteTextView fieldSendTo;
+	
 
-	String authToken = "";
+	String authToken;
 	Spinner spnrAccnt = null;
 
 	String textSender = null;
-	String textRecepient = null;
+	String textRecipient = null;
 	String textPercentageAlarm = null;
 
 	Switch swServiceState;
 	
 	TextView tvPercentage = null;
 	TextView tvSetPercentage = null;
+	TextView tvCustomMessages = null;
+	private TextView tvConnected;
+	
+	View batteryLevelView;
+	
+	public int alarmBatteryLevel;
 	
 	ArrayList<CustomContact> contactList;
 	ArrayAdapter<CustomContact> contactListAdapter;
 
-	private int REQUEST_AUTHORIZATION = 11;
+	
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		
+		mPreferences = PreferenceManager
+				.getDefaultSharedPreferences(mContext);
 
 		swServiceState = (Switch) findViewById(R.id.swServiceState);
-		fieldSendTo = (AutoCompleteTextView) findViewById(R.id.fieldSendTo);
-		tvPercentage = (TextView) findViewById(R.id.tvPercentage);
+		fieldSendTo = (MultiAutoCompleteTextView) findViewById(R.id.fieldSendTo);
+		batteryLevelView = (View) findViewById(R.id.linLayoutBatteryLevel);
 		tvSetPercentage = (TextView) findViewById(R.id.tvSetPercentage);
+		tvCustomMessages = (TextView) findViewById(R.id.tvCustomMessages);
+		tvConnected = (TextView) findViewById(R.id.tvConnected);
+		
+		
 
 		spnrAccnt = (Spinner) findViewById(R.id.spinnerAccounts);
-
+		spnrAccnt.setOnItemSelectedListener(onAccountChangeListener);
+		
 		prgrBar = (ProgressBar) findViewById(R.id.progressBar);
 		prgrBar.setVisibility(View.GONE);
 		
-		tvPercentage.setText("Set to " + CUR_PERCENTAGE_VALUE + "%");
+		setAlarmBatteryLevel(mPreferences.getInt(Alarm.ALARM_VALUE, CUR_PERCENTAGE_VALUE));
 		
-		tvSetPercentage.setOnClickListener(btrLvlPickerListener);
+		setAuthToken(mPreferences.getString(Alarm.AUTH_TOKEN, null));
 		
-		contactList = new ArrayList<CustomContact>();
-
-		ContentResolver cr = getContentResolver();
-
-		Cursor cur = cr.query(ContactsContract.Contacts.CONTENT_URI, null,
-				null, null, null);
-		if (cur.getCount() > 0) {
-			while (cur.moveToNext()) {
-				String id = cur.getString(cur
-						.getColumnIndex(ContactsContract.Contacts._ID));
-				String name = cur
-						.getString(cur
-								.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
-				
-				Cursor emailCur = cr.query(
-						ContactsContract.CommonDataKinds.Email.CONTENT_URI, null,
-						ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = ?",
-						new String[] { id }, null);
-				while (emailCur.moveToNext()) {
-					// This would allow you get several email addresses
-					// if the email addresses were stored in an array
-					String email = emailCur
-							.getString(emailCur
-									.getColumnIndex(ContactsContract.CommonDataKinds.Email.DATA));
-					int emailTypeNum = emailCur
-							.getInt(emailCur
-									.getColumnIndex(ContactsContract.CommonDataKinds.Email.TYPE));
-					String emailType = getEmailType(emailTypeNum);
-
-					
-					CustomContact cstCnt = new CustomContact(name, email, emailType);
-					contactList.add(cstCnt);
+		setTextRecipient(mPreferences.getString(Alarm.RECIPIENT, ""));
+		
+		setTextSender(mPreferences.getString(Alarm.SENDER_ACCOUNT, null));
+		
+		setTVBatteryLevel();
+		
+		setTVConnectAccount();
+		
+		setSPNRAccnt();
+		
+		setFieldSendTo();
+		
+		setSWServiceState();
+		
+		if (mPreferences.getBoolean(Alarm.SERVICE_ON, false)) {
+			fieldSendTo.setText(getTextRecipient());
+			fieldSendTo.setEnabled(false);
+			Intent intent = new Intent(mContext, AlarmService.class);
+			startService(intent);
+		} else {
+			if (savedInstanceState == null){
+				//make field disabled until contact list is loaded
+				fieldSendTo.setEnabled(false);
+				//load contact list
+				executeContactListLoaderTask();
+			} else {
+				contactList = (ArrayList<CustomContact>) savedInstanceState.getSerializable(CONTACT_LIST);
+				if (contactList == null){
+					executeContactListLoaderTask();
+				} else {
+					setContactListAdapter();
 				}
-				emailCur.close();
 			}
-			}
+		}
 		
-
+		batteryLevelView.setOnClickListener(btrLvlPickerListener);
 		
-		CustomContact[] contactsArray = new CustomContact[contactList.size()];
-		contactsArray = contactList.toArray(contactsArray);
 		
-		contactListAdapter = new CustomAdapter(this, contactList);
-
-		fieldSendTo.setAdapter(contactListAdapter);
-
-		ArrayAdapter<String> adapter = new ArrayAdapter<String>(
-				getApplicationContext(),
-				android.R.layout.simple_spinner_dropdown_item,
-				getAccountNames());
-
-		spnrAccnt.setAdapter(adapter);
 		
 		//setTglBtnServiceSetCheck(tglBtnStartService);
 
-		swServiceState.setOnCheckedChangeListener(tglBtnServiceListener);
+		swServiceState.setOnCheckedChangeListener(swServiceStateListener);
 
 	}
+
 
 	@Override
-	protected void onResume() {
-		super.onResume();
-		// setTglBtnServiceSetCheck(tglBtnStartService);
+	protected void onPause() {
+		super.onPause();
+		putPrefs();
 	}
 	
-	private String getEmailType(int tp) {
-	
-		switch (tp) {
-		case ContactsContract.CommonDataKinds.Email.TYPE_HOME: return getString(R.string.mail_type_home);
-		case ContactsContract.CommonDataKinds.Email.TYPE_MOBILE: return getString(R.string.mail_type_mobile);
-		case ContactsContract.CommonDataKinds.Email.TYPE_OTHER: return getString(R.string.mail_type_other);
-		case ContactsContract.CommonDataKinds.Email.TYPE_WORK: return getString(R.string.mail_type_work);
-		}
+	@Override
+	protected void onSaveInstanceState (Bundle outState) {
+		super.onSaveInstanceState(outState);
 		
-		return "";
+		//persistent information
+		putPrefs();
+		
+		//non-persistent information
+		if (contactList != null) {
+			outState.putSerializable(CONTACT_LIST, contactList);
+		}
 	}
+	
+	
 
-	private void setTglBtnServiceSetCheck(ToggleButton tglBtn) {
-		tglBtn.setChecked(isAlarmServiceRunning());
-	}
 
 	private boolean isAlarmServiceRunning() {
 		ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
@@ -190,8 +191,8 @@ public class MainActivity extends Activity {
 	}
 
 	private String[] getAccountNames() {
-		AccountManager mAccountManager = AccountManager.get(this);
-		Account[] accounts = mAccountManager
+		final AccountManager mAccountManager = AccountManager.get(this);
+		final Account[] accounts = mAccountManager
 				.getAccountsByType(GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE);
 		String[] names = new String[accounts.length];
 		for (int i = 0; i < names.length; i++) {
@@ -200,127 +201,99 @@ public class MainActivity extends Activity {
 		return names;
 	}
 
-	@Override
+	/*@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
-	}
+	}*/
 
-	private class GetTokenTask extends AsyncTask<String, Void, String> {
-
-		String textInToast = null;
-		String scope = "oauth2:https://mail.google.com";
-
-		@Override
-		protected void onPreExecute() {
-			super.onPreExecute();
-			prgrBar.setVisibility(View.VISIBLE);
-		}
-
-		@Override
-		protected void onPostExecute(String result) {
-			super.onPostExecute(result);
-			prgrBar.setVisibility(View.GONE);
-			authToken = result;
-
-			if (textInToast != null) {
-				Toast.makeText(getApplicationContext(), textInToast,
-						Toast.LENGTH_SHORT).show();
-			}
-
-			SharedPreferences preferences = PreferenceManager
-					.getDefaultSharedPreferences(getApplicationContext());
-			SharedPreferences.Editor editor = preferences.edit();
-			editor.putString("Recepient", textRecepient);
-			editor.putString("Sender", textSender);
-			editor.putString("AlarmValue", textPercentageAlarm);
-			editor.putString("AuthToken", authToken);
-			editor.putBoolean("serviceShouldWork", true);
-			editor.commit();
-
-			startService(new Intent(getApplicationContext(), AlarmService.class));
-
-		}
-
-		@Override
-		protected String doInBackground(String... params) {
-			String token = null;
-			String newToken = null;
-
-			try {
-				token = GoogleAuthUtil.getToken(getApplicationContext(),
-						params[0], scope);
-
-				GoogleAuthUtil.invalidateToken(getApplicationContext(), token);
-				textInToast = "Server auth error, please try again.";
-				newToken = GoogleAuthUtil.getToken(getApplicationContext(),
-						params[0], scope);
-				return newToken;
-			} catch (GooglePlayServicesAvailabilityException playEx) {
-				playEx.getMessage();
-				playEx.printStackTrace();
-				return null;
-			} catch (UserRecoverableAuthException userAuthEx) {
-				// Start the user recoverable action using the intent returned
-				// by
-				// getIntent()
-				userAuthEx.printStackTrace();
-				startActivityForResult(userAuthEx.getIntent(),
-						REQUEST_AUTHORIZATION);
-				return null;
-			} catch (IOException transientEx) {
-				// network or server error, the call is expected to succeed if
-				// you try again later.
-				// Don't attempt to call again immediately - the request is
-				// likely to
-				// fail, you'll hit quotas or back-off.
-				transientEx.printStackTrace();
-				textInToast = "Service unavailable";
-				return null;
-			} catch (GoogleAuthException authEx) {
-				// Failure. The call is not expected to ever succeed so it
-				// should not be
-				// retried.
-				authEx.printStackTrace();
-				textInToast = "Google service unavailable";
-				return null;
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			return newToken;
-		}
-
-	}
+	
 
 	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
 
 		if (requestCode == REQUEST_AUTHORIZATION) {
 			if (resultCode == Activity.RESULT_OK) {
 				data.getExtras();
-				new GetTokenTask().execute();
+				GetTokenTask getTokenTask = new GetTokenTask(this);
+				getTokenTask.setDelegate(this);
+				getTokenTask.execute();
 			}
+		}
+		
+		if (requestCode == REQUEST_PERCENTAGE_CHANGE) {
+			Bundle extras = data.getExtras();
+			setAlarmBatteryLevel(extras.getInt(NumberPickerFragment.CUR_NUMBER));
+			setTVBatteryLevel();
 		}
 	}
 
-	private OnCheckedChangeListener tglBtnServiceListener = new OnCheckedChangeListener() {
+	private OnCheckedChangeListener swServiceStateListener = new OnCheckedChangeListener() {
 
 		@Override
 		public void onCheckedChanged(CompoundButton buttonView,
 				boolean isChecked) {
+			
+			SharedPreferences preferences = PreferenceManager
+					.getDefaultSharedPreferences(mContext);
+			
 			if (isChecked) {
-				textSender = spnrAccnt.getSelectedItem().toString();
-				textRecepient = fieldSendTo.getText().toString();
-				textPercentageAlarm = fieldPercentageAlarm.getText().toString();
-
-				new GetTokenTask().execute(textSender);
-			} else {
-				Intent intent = new Intent(getApplicationContext(),
-						AlarmService.class);
+				//check if token is activated
+				if (getAuthToken() == null){
+					Toast.makeText(mContext, getResources().getString(R.string.string_connect_your_account), Toast.LENGTH_SHORT).show();
+					buttonView.setChecked(false);
+					return;
+				}
+				
+				//check if there is at least one recipient
+				if (getTextRecipient() == null){
+					Toast.makeText(mContext, getResources().getString(R.string.string_select_recipient), Toast.LENGTH_SHORT).show();
+					buttonView.setChecked(false);
+					return;
+				}
+				
+				//if everything is initialized, put shared preferences and start the service
+				
+				fieldSendTo.setEnabled(false);
+				spnrAccnt.setEnabled(false);
+				setTextRecipient(fieldSendTo.getText().toString());
+				
+				
+				SharedPreferences.Editor editor = preferences.edit();
+				editor.putString(Alarm.RECIPIENT, getTextRecipient());
+				editor.putString(Alarm.SENDER_ACCOUNT, getTextSender());
+				editor.putInt(Alarm.ALARM_VALUE, getAlarmBatteryLevel());
+				editor.putString(Alarm.AUTH_TOKEN, getAuthToken());
+				editor.putBoolean(Alarm.WORKING_FLAG, true);
+				editor.commit();
+				
+				Intent intent = new Intent(getApplicationContext(),	AlarmService.class);
 				startService(intent);
-				stopService(intent);
+				Toast.makeText(mContext, "Service started", Toast.LENGTH_SHORT).show();
+			} else {
+				
+				//check if service was started
+				boolean isOn = preferences.getBoolean(Alarm.SERVICE_ON, false);
+				
+				if (isOn) {
+					Intent intent = new Intent(getApplicationContext(),
+							AlarmService.class);
+					startService(intent);
+					stopService(intent);
+					fieldSendTo.setEnabled(true);
+					spnrAccnt.setEnabled(true);
+				}
+				
+				SharedPreferences.Editor editor = mPreferences.edit();
+				editor.putBoolean(Alarm.WORKING_FLAG, true);
+				editor.commit();
+				
+				if (contactList == null) {
+					executeContactListLoaderTask();
+				}
+				
 			}
 
 		}
@@ -336,11 +309,109 @@ public class MainActivity extends Activity {
 		}
 	};
 	
+	private OnClickListener onConnectListener = new OnClickListener() {
+		
+		@Override
+		public void onClick(View v) {
+			setTextSender(spnrAccnt.getSelectedItem().toString());
+			GetTokenTask getTokenTask = new GetTokenTask(mContext);
+			getTokenTask.setDelegate(MainActivity.this);
+			getTokenTask.execute(getTextSender());
+			
+		}
+	};
+	
+	private OnItemSelectedListener onAccountChangeListener = new OnItemSelectedListener() {
+
+		@Override
+		public void onItemSelected(AdapterView<?> parent, View view,
+				int position, long id) {
+			
+			if (!spnrAccnt.getSelectedItem().toString().equals(textSender)) {
+				setTextSender(spnrAccnt.getSelectedItem().toString());
+				GoogleAuthUtil.invalidateToken(mContext, authToken);
+				setAuthToken(null);
+				putPrefs();
+				setTVConnectAccount();
+			}
+			
+		}
+
+		@Override
+		public void onNothingSelected(AdapterView<?> parent) {
+			// TODO Auto-generated method stub
+			
+		}
+	};
+	
+	private void setSPNRAccnt() {
+		ArrayAdapter<String> adapter = new ArrayAdapter<String>(
+				mContext,
+				R.layout.spinner, R.id.accountName,
+				getAccountNames());
+
+		int spinnerPosition = adapter.getPosition(getTextSender());
+		
+		spnrAccnt.setAdapter(adapter);
+		spnrAccnt.setSelection(spinnerPosition);
+		
+		//TODO If account exists no more
+		
+		
+	}
+	
+	private void setFieldSendTo() {
+		fieldSendTo.setText(getTextRecipient());
+	}
+	
+	private void setTVBatteryLevel() {
+		tvSetPercentage.setText("Currently is set to " + getAlarmBatteryLevel() + "%");
+	}
+	
+	private void setTVConnectAccount() {
+		
+		if (getAuthToken() == null) {
+			//initialize "connect button"
+			tvConnected.setText(R.string.string_connect_underlined);
+			tvConnected.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+			tvConnected.setOnClickListener(onConnectListener);
+		} else {
+			tvConnected.setText(R.string.string_connected);
+			tvConnected.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+		}
+		
+	}
+	
+	private void setSWServiceState() {
+		
+		boolean isOn = mPreferences.getBoolean(Alarm.SERVICE_ON, false);
+		swServiceState.setChecked(isOn);
+	
+	}
+	
+	private void setContactListAdapter() {
+		contactListAdapter = new CustomAdapter(this, contactList);
+		fieldSendTo.setEnabled(true);
+		fieldSendTo.setAdapter(contactListAdapter);	
+		fieldSendTo.setTokenizer(new MultiAutoCompleteTextView.CommaTokenizer());
+	}
+
+	
 	private OnClickListener btrLvlPickerListener = new OnClickListener() {
 		
 		@Override
 		public void onClick(View v) {
-			RelativeLayout linearLayout = new RelativeLayout(mContext);
+			
+			FragmentManager fm = getFragmentManager();
+            NumberPickerFragment dialog = NumberPickerFragment
+            		.newInstance(getAlarmBatteryLevel(), MAX_PERCENTAGE_VALUE, MIN_PERCENTAGE_VALUE);
+            dialog.show(fm, DIALOG_NUMBER);
+			
+			
+			
+			
+			
+			/*RelativeLayout linearLayout = new RelativeLayout(mContext);
 			final NumberPicker numPicker = new NumberPicker(getApplicationContext());
 			numPicker.setMaxValue(MAX_PERCENTAGE_VALUE);
 			numPicker.setMinValue(MIN_PERCENTAGE_VALUE);
@@ -354,7 +425,7 @@ public class MainActivity extends Activity {
 	        linearLayout.addView(numPicker, numPicerParams);
 
 	        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(mContext);
-	        alertDialogBuilder.setTitle("Select the number");
+	        alertDialogBuilder.setTitle("Set percentage");
 	        alertDialogBuilder.setView(linearLayout);
 	        alertDialogBuilder
 	                .setCancelable(false)
@@ -362,7 +433,9 @@ public class MainActivity extends Activity {
 	                        new DialogInterface.OnClickListener() {
 	                            public void onClick(DialogInterface dialog,
 	                                                int id) {
-	                                Log.e("","New Quantity Value : "+ numPicker.getValue());
+	                                Log.i("","New Quantity Value : "+ numPicker.getValue());
+	                                alarmBatteryLevel = numPicker.getValue();
+	                                //tvPercentage.setText("Currently is set to " + alarmBatteryLevel + "%");
 
 	                            }
 	                        })
@@ -374,8 +447,122 @@ public class MainActivity extends Activity {
 	                            }
 	                        });
 	        AlertDialog alertDialog = alertDialogBuilder.create();
-	        alertDialog.show();			
+	        alertDialog.show();		*/	
 		}
 	};
+	
+	private void executeContactListLoaderTask() {
+		prgrBar.setVisibility(View.VISIBLE);
+		tvCustomMessages.setText("Loading contact list...");
+		contactLoaderTask.delegate = this;
+		contactLoaderTask.execute();
+	}
+	
+	private void putPrefs() {
+		SharedPreferences.Editor editor = mPreferences.edit();
+		editor.putString(Alarm.AUTH_TOKEN, getAuthToken());
+		editor.putString(Alarm.SENDER_ACCOUNT, getTextSender());
+		editor.putString(Alarm.RECIPIENT, getTextRecipient());
+		editor.commit();
+	}
+
+
+
+
+
+	@Override
+	public void asyncTaskContactLoaderFinished(ArrayList<CustomContact> cntList) {
+		//contact list stopped loading
+		
+		contactList = cntList;
+		prgrBar.setVisibility(View.INVISIBLE);
+		tvCustomMessages.setText("");
+		
+		CustomContact[] contactsArray = new CustomContact[contactList.size()];
+		contactsArray = contactList.toArray(contactsArray);
+		
+		setContactListAdapter();
+	}
+
+	@Override
+	public void asyncTaskGetTokenStarted() {
+		prgrBar.setVisibility(View.VISIBLE);
+		tvCustomMessages.setText("Authorizating account...");
+	}
+
+	@Override
+	public void asyncTaskGetTokenFinished(String result, String text) {
+		prgrBar.setVisibility(View.INVISIBLE);
+		tvCustomMessages.setVisibility(View.INVISIBLE);
+		setAuthToken(result);
+		
+		setTVConnectAccount();
+
+		if (text != null) {
+			Toast.makeText(getApplicationContext(), text,
+					Toast.LENGTH_SHORT).show();
+		}
+
+		/*SharedPreferences preferences = PreferenceManager
+				.getDefaultSharedPreferences(getApplicationContext());
+		SharedPreferences.Editor editor = preferences.edit();
+		editor.putString("Recepient", textRecepient);
+		editor.putString("Sender", textSender);
+		editor.putInt("AlarmValue", alarmBatteryLevel);
+		editor.putString("AuthToken", authToken);
+		editor.putBoolean("serviceShouldWork", true);
+		editor.commit();*/
+		
+	}
+
+	@Override
+	public void asyncTaskGetTokenAuth(UserRecoverableAuthException exc) {
+		startActivityForResult(exc.getIntent(), REQUEST_AUTHORIZATION);
+	}
+	
+	@Override
+	public void numPickerFragmentAlarmValueChosen(int value) {
+		SharedPreferences.Editor editor = mPreferences.edit();
+		editor.putInt(Alarm.ALARM_VALUE, value);
+		editor.commit();
+		setAlarmBatteryLevel(value);
+		setTVBatteryLevel();
+	}
+
+	public int getAlarmBatteryLevel() {
+		return alarmBatteryLevel;
+	}
+
+	public void setAlarmBatteryLevel(int alarmBatteryLevel) {
+		this.alarmBatteryLevel = alarmBatteryLevel;
+	}
+
+	public String getTextSender() {
+		return textSender;
+	}
+
+	public void setTextSender(String textSender) {
+		this.textSender = textSender;
+	}
+
+	public String getTextRecipient() {
+		return textRecipient;
+	}
+
+	public void setTextRecipient(String textRecipient) {
+		this.textRecipient = textRecipient;
+	}
+
+	public String getAuthToken() {
+		return authToken;
+	}
+
+	public void setAuthToken(String authToken) {
+		this.authToken = authToken;
+	}
+	
+	
+	
+	
 
 }

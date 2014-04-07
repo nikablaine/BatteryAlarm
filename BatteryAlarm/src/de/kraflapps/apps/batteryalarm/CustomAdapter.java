@@ -12,7 +12,7 @@ import android.widget.Filter;
 import android.widget.Filterable;
 import android.widget.TextView;
 
-public class CustomAdapter extends ArrayAdapter<CustomContact> implements Filterable{
+public class CustomAdapter extends ArrayAdapter<CustomContact> implements Filterable {
 
 
 		private LayoutInflater mInflater = null;
@@ -37,7 +37,7 @@ public class CustomAdapter extends ArrayAdapter<CustomContact> implements Filter
 	    
 	    @Override
 	    public CustomContact getItem(int position) {
-	        return mOriginalValues.get(position);
+	        return cntArrList.get(position);
 	    }
 
 	    public static class ViewHolder {
@@ -153,18 +153,19 @@ public class CustomAdapter extends ArrayAdapter<CustomContact> implements Filter
 	    public View getView(final int position, View convertView, ViewGroup parent) {
 
 	        ViewHolder holder;
+	        View newView = null;
 
 	        if (convertView == null) {
 
 	            holder = new ViewHolder();
 
-	            convertView = mInflater.inflate(R.layout.autocomplete_view,
+	            newView = mInflater.inflate(R.layout.autocomplete_view,
 	                    parent, false);
-	            holder.name = (TextView) convertView.findViewById(R.id.cntName);
-	            holder.email = (TextView) convertView.findViewById(R.id.cntEmail);
-	            holder.type = (TextView) convertView.findViewById(R.id.cntType);
+	            holder.name = (TextView) newView.findViewById(R.id.cntName);
+	            holder.email = (TextView) newView.findViewById(R.id.cntEmail);
+	            holder.type = (TextView) newView.findViewById(R.id.cntType);
 
-	            convertView.setTag(holder);
+	            newView.setTag(holder);
 	        } else {
 	            holder = (ViewHolder) convertView.getTag();
 	        }
@@ -180,6 +181,6 @@ public class CustomAdapter extends ArrayAdapter<CustomContact> implements Filter
 
 	        }
 	        
-      	        return convertView;
+      	        return (newView == null ? convertView : newView);
 	    }
 	}

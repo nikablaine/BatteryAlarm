@@ -10,10 +10,14 @@
     <string name="string_service_is_on">Service is ON</string>
 	<string name="string_service_is_off">Service is OFF</string>
 	<string name="string_connect_as">Connect as</string>
+	<string name="string_connect_underlined"><u>Connect</u></string>
+	<string name="string_connected"><u>Connected</u></string>
 	<string name="string_battery_level">Critical battery level</string>
-	<string name="string_set_new_critical_level"><u>Set new value</u></string>
+	<string name="string_set_new_critical_level">Set new value</string>
 	<string name="string_service_state">Service state</string>
 	<string name="string_slide_to_change">Slide to start/stop</string>
+	<string name="string_connect_your_account">Please connect your account</string>
+	<string name="string_select_recipient">Please select one or more recipients</string>
 	<string name="mail_type_home">HOME</string>
     <string name="mail_type_work">WORK</string>
     <string name="mail_type_other">OTHER</string>
