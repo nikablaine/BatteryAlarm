@@ -1,0 +1,149 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/app_background"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context=".MainActivity" >
+
+    <LinearLayout
+        android:id="@+id/linLayout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" >
+
+        <LinearLayout 
+            android:id="@+id/linLayoutConnect"
+        	android:layout_width="fill_parent"
+        	android:layout_height="wrap_content"
+        	android:orientation="horizontal">
+        	
+        	<TextView
+            	style="@style/Header"
+            	android:layout_width="fill_parent"
+            	android:layout_height="wrap_content"
+            	android:text="@string/string_connect_as"
+        		android:layout_weight="1">
+        	</TextView>
+        	
+			<TextView
+            	android:id="@+id/tvConnected"
+            	android:layout_width="fill_parent"
+            	android:layout_height="wrap_content"
+            	android:clickable="true"
+            	android:gravity="right|center_vertical"
+        		android:layout_weight="1">
+        	</TextView>
+        		
+        </LinearLayout>
+
+        <Spinner
+            android:id="@+id/spinnerAccounts"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="5dp">
+        </Spinner>
+        
+        <View
+            style="@style/InvisibleDivider"
+            android:layout_width="wrap_content" />
+        
+        <View style="@style/Divider"/>
+        
+        <View style="@style/InvisibleDivider" />
+                
+		<LinearLayout 
+		    android:id="@+id/linLayoutBatteryLevel"
+		    android:orientation="vertical"
+		    android:layout_width="match_parent"
+		    android:layout_height="wrap_content">
+			
+			<TextView
+            	style="@style/Header"
+            	android:layout_width="fill_parent"
+            	android:layout_height="wrap_content"
+            	android:text="@string/string_battery_level" >
+        	</TextView><View style="@style/InvisibleDivider" />
+
+        	<TextView
+            	android:id="@+id/tvSetPercentage"
+            	android:layout_width="fill_parent"
+	            android:layout_height="wrap_content"
+	            android:layout_marginLeft="10dp"
+	            android:autoLink="all"
+	            android:clickable="true">
+	        </TextView>
+        </LinearLayout>
+
+        <View style="@style/InvisibleDivider" />
+
+        <View style="@style/Divider" />
+
+        <View style="@style/InvisibleDivider" />
+		
+		<TextView
+            style="@style/Header"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/string_send_to" >
+        </TextView>
+        
+        <MultiAutoCompleteTextView
+            android:id="@+id/fieldSendTo"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="5dp"
+            android:labelFor="@+id/fieldSendTo" >
+
+    	</MultiAutoCompleteTextView>
+    	
+        <View style="@style/InvisibleDivider" />
+		
+		<View style="@style/Divider"/>
+        
+        <View style="@style/InvisibleDivider" />
+        
+        <TextView
+            style="@style/Header"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/string_service_state" >
+        </TextView>
+		
+        <Switch
+        	android:id="@+id/swServiceState"
+        	android:layout_width="fill_parent"
+        	android:layout_height="wrap_content"
+        	android:layout_marginLeft="5dp"
+        	android:text="@string/string_slide_to_change" />
+		
+        <View style="@style/InvisibleDivider" />
+		
+		<View style="@style/Divider"/>
+        
+    	<View style="@style/InvisibleDivider" />
+        
+    
+
+	    <ProgressBar
+	        android:id="@+id/progressBar"
+	        android:layout_width="fill_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_gravity="center_horizontal">
+	    </ProgressBar>
+	    
+	    <TextView
+	        android:id="@+id/tvCustomMessages"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_gravity="center_horizontal">
+	     </TextView>
+
+    </LinearLayout>
+  
+
+
+</ScrollView>

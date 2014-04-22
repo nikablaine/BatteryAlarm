@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">BatteryAlarm</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="start_service">Start Service</string>
+    <string name="percentage_alarm">101</string>
+    <string name="string_send_to">Send alarm message to</string>
+    <string name="string_service_is_on">Service is ON</string>
+	<string name="string_service_is_off">Service is OFF</string>
+	<string name="string_connect_as">Connect as</string>
+	<string name="string_connect_underlined"><u>Connect</u></string>
+	<string name="string_connected"><u>Connected</u></string>
+	<string name="string_battery_level">Critical battery level</string>
+	<string name="string_set_new_critical_level">Set new value</string>
+	<string name="string_service_state">Service state</string>
+	<string name="string_slide_to_change">Slide to start/stop</string>
+	<string name="string_connect_your_account">Please connect your account</string>
+	<string name="string_select_recipient">Please select one or more recipients</string>
+	<string name="string_auth_problem">Account authorization problem</string>
+	<string name="string_req_auth_problem">Application requests permission</string>
+	<string name="string_tap_to_open_app">Tap to open application</string>
+	<string name="mail_type_home">HOME</string>
+    <string name="mail_type_work">WORK</string>
+    <string name="mail_type_other">OTHER</string>
+	<string name="mail_type_mobile">MOBILE</string>
+    
+</resources>
