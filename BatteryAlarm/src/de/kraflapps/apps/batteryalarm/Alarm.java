@@ -1,7 +1,7 @@
 package de.kraflapps.apps.batteryalarm;
 
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.Properties;
 
 import javax.mail.Message;
@@ -13,16 +13,24 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
 import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.Notification.Builder;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.media.RingtoneManager;
 import android.os.AsyncTask;
 import android.os.BatteryManager;
+import android.os.Bundle;
 import android.os.PowerManager;
+import android.os.Vibrator;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -30,7 +38,7 @@ import com.google.android.gms.auth.UserRecoverableAuthException;
 import com.sun.mail.smtp.SMTPTransport;
 import com.sun.mail.util.BASE64EncoderStream;
 
-public class Alarm extends BroadcastReceiver implements AsyncResult {
+public class Alarm extends BroadcastReceiver implements AsyncTokenGet {
 
 	public static final String WORKING_FLAG = "de.kraflapps.apps.batteryalarm.working_flag";
 	public static final String SERVICE_ON = "de.kraflapps.apps.batteryalarm.service_on";
@@ -38,11 +46,15 @@ public class Alarm extends BroadcastReceiver implements AsyncResult {
 	public static final String ALARM_VALUE = "de.kraflapps.apps.batteryalarm.alarm_value";
 	public static final String SENDER_ACCOUNT = "de.kraflapps.apps.batteryalarm.sender_account";
 	public static final String RECIPIENT = "de.kraflapps.apps.batteryalarm.recipient";
+	public static final String REQ_AUTH = "de.kraflapps.apps.batteryalarm.req_auth";
+	public static final String REQ_AUTH_EXC = "de.kraflapps.apps.batteryalarm.req_auth_exc";
+	
+	public static final int NOTIFY_AUTH_PROBLEM = 1;
 
 	private boolean workingFlag;
 	private String recipient;
 	private String[] recipientArr;
-	private String authToken;
+	//private String authToken;
 	private String sender;
 	private int alarmValue;
 
@@ -50,7 +62,16 @@ public class Alarm extends BroadcastReceiver implements AsyncResult {
 
 	private Context appContext;
 
-	private boolean repeat;
+	private float batteryPct;
+
+	public Alarm() {
+		super();
+	}
+	
+	public Alarm(Context appContext) {
+		super();
+		this.appContext = appContext;
+	}
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
@@ -72,22 +93,24 @@ public class Alarm extends BroadcastReceiver implements AsyncResult {
 		int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
 		int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
 
-		float batteryPct = (level / (float) scale) * 100;
+		batteryPct = (level / (float) scale) * 100;
 
 		SharedPreferences prefs = PreferenceManager
 				.getDefaultSharedPreferences(context);
 		workingFlag = prefs.getBoolean(WORKING_FLAG, true);
 		recipient = prefs.getString(RECIPIENT, null);
 		recipientArr = (recipient == null ? null : recipient.trim().split(","));
-		authToken = prefs.getString(AUTH_TOKEN, null);
+		//authToken = prefs.getString(AUTH_TOKEN, null);
 		sender = prefs.getString(SENDER_ACCOUNT, null);
 		alarmValue = prefs.getInt(ALARM_VALUE, 0);
 
+		appContext = context;
 		session = createSessionObject();
 
 		if (batteryPct <= alarmValue && workingFlag) {
-			sendMail(recipientArr, "Battery Alarm Mail",
-					"Current battery status is " + batteryPct);
+			initializeMailSending(sender);
+			//sendMail(recipientArr, "Battery Alarm Mail",
+			//		"Current battery status is " + batteryPct);
 
 		}
 
@@ -168,14 +191,22 @@ public class Alarm extends BroadcastReceiver implements AsyncResult {
 		return transport;
 	}
 
-	private boolean sendMail(String[] email, String subject, String messageBody) {
+	private void initializeMailSending(String sender) {
+		
+		GetTokenTask getTokenTask = new GetTokenTask(appContext);
+		getTokenTask.setDelegate(this);
+		getTokenTask.execute(sender);
+		
+	}
+	
+	private boolean sendMail(String authToken, String[] email, String subject, String messageBody) {
 
 		boolean flag = true;
 		for (int i = 0; i < email.length; i++) {
 			try {
 				Message message = createMessage(email[i], subject, messageBody,
 						session);
-				new SendMailTask().execute(message);
+				new SendMailTask(authToken).execute(message);
 				Log.i(MainActivity.TAG, "Creating message with recipient = "
 						+ email[i]);
 				flag = true;
@@ -212,6 +243,12 @@ public class Alarm extends BroadcastReceiver implements AsyncResult {
 	private class SendMailTask extends AsyncTask<Message, Void, Void> {
 		// private ProgressDialog progressDialog;
 
+		private String authToken;
+		
+		public SendMailTask(String token) {
+			setAuthToken(token);
+		}
+		
 		@Override
 		protected void onPreExecute() {
 			super.onPreExecute();
@@ -223,12 +260,11 @@ public class Alarm extends BroadcastReceiver implements AsyncResult {
 		protected void onPostExecute(Void aVoid) {
 			super.onPostExecute(aVoid);
 
-			if (!repeat) {
+			
 				SharedPreferences.Editor editor = PreferenceManager
 						.getDefaultSharedPreferences(appContext).edit();
 				editor.putBoolean(WORKING_FLAG, false);
 				editor.commit();
-			}
 
 		}
 
@@ -245,13 +281,20 @@ public class Alarm extends BroadcastReceiver implements AsyncResult {
 				GetTokenTask getTokenTask = new GetTokenTask(getAppContext());
 				getTokenTask.setDelegate(Alarm.this);
 				getTokenTask.execute(getSender());
-				repeat = true;
 			} catch (Exception e) {
 				e.printStackTrace();
-				repeat = false;
 			}
 			return null;
 		}
+
+		public String getAuthToken() {
+			return authToken;
+		}
+
+		public void setAuthToken(String authToken) {
+			this.authToken = authToken;
+		}
+		
 	}
 
 	public boolean isWorkingFlag() {
@@ -268,14 +311,6 @@ public class Alarm extends BroadcastReceiver implements AsyncResult {
 
 	public void setRecepient(String recepient) {
 		this.recipient = recepient;
-	}
-
-	public String getAuthToken() {
-		return authToken;
-	}
-
-	public void setAuthToken(String authToken) {
-		this.authToken = authToken;
 	}
 
 	public String getSender() {
@@ -310,11 +345,7 @@ public class Alarm extends BroadcastReceiver implements AsyncResult {
 		this.appContext = appContext;
 	}
 
-	@Override
-	public void asyncTaskContactLoaderFinished(ArrayList<CustomContact> result) {
-		// TODO Auto-generated method stub
 
-	}
 
 	@Override
 	public void asyncTaskGetTokenStarted() {
@@ -324,23 +355,69 @@ public class Alarm extends BroadcastReceiver implements AsyncResult {
 
 	@Override
 	public void asyncTaskGetTokenAuth(UserRecoverableAuthException exc) {
-		// TODO Auto-generated method stub
+		//Activity.startActivityForResult(exc.getIntent(), MainActivity.REQUEST_AUTHORIZATION);
+		NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(appContext)
+			.setTicker(appContext.getResources().getString(R.string.string_req_auth_problem))
+			.setSmallIcon(R.drawable.battery_caution)
+			.setContentTitle(appContext.getResources().getString(R.string.string_req_auth_problem))
+			.setContentText(appContext.getResources().getString(R.string.string_tap_to_open_app));
+		
+		MainActivity.setAuthExc(exc);
+		Intent resultIntent = new Intent(appContext, MainActivity.class);
+		Bundle extras = new Bundle();
+		//extras.putSerializable(REQ_AUTH_EXC, (Serializable) exc);
+        extras.putBoolean(REQ_AUTH, true);
+		resultIntent.putExtras(extras);
+		resultIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        
+		TaskStackBuilder stackBuilder = TaskStackBuilder.create(appContext);
+        stackBuilder.addParentStack(MainActivity.class);
+        stackBuilder.addNextIntent(resultIntent);
+        PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(0,PendingIntent.FLAG_UPDATE_CURRENT);
+  
+        notificationBuilder.setContentIntent(resultPendingIntent);
+		
+        Notification notification = notificationBuilder.build();
+		NotificationManager notificationManager = (NotificationManager) appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+		notificationManager.notify(NOTIFY_AUTH_PROBLEM, notification);
 
 	}
 
 	@Override
 	public void asyncTaskGetTokenFinished(String result, String text) {
-		SharedPreferences.Editor editor = PreferenceManager
-				.getDefaultSharedPreferences(appContext).edit();
-		editor.putString(AUTH_TOKEN, result);
-		editor.commit();
+		
+		if (result != null) {
+			SharedPreferences.Editor editor = PreferenceManager
+					.getDefaultSharedPreferences(appContext).edit();
+			editor.putString(AUTH_TOKEN, result);
+			editor.commit();
+			
+			sendMail(result, recipientArr, "Battery Alarm Mail",
+					"Current battery status is " + batteryPct);
 
+		} else {
+			NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(appContext)
+			.setTicker(appContext.getResources().getString(R.string.string_auth_problem))
+			.setSmallIcon(R.drawable.battery_caution)
+			.setContentTitle(appContext.getResources().getString(R.string.string_auth_problem))
+			.setContentText(text);
+			
+			Intent resultIntent = new Intent(appContext, MainActivity.class);
+            TaskStackBuilder stackBuilder = TaskStackBuilder.create(appContext);
+            stackBuilder.addParentStack(MainActivity.class);
+            stackBuilder.addNextIntent(resultIntent);
+            PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(0,PendingIntent.FLAG_UPDATE_CURRENT);
+            notificationBuilder.setContentIntent(resultPendingIntent);
+			
+            Notification notification = notificationBuilder.build();
+			NotificationManager notificationManager = (NotificationManager) appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+			notificationManager.notify(NOTIFY_AUTH_PROBLEM, notification);
+			
+		}
+		
+		
 	}
 
-	@Override
-	public void numPickerFragmentAlarmValueChosen(int value) {
-		// TODO Auto-generated method stub
 
-	}
 
 }

@@ -8,22 +8,23 @@ import android.widget.Toast;
 
 public class AlarmService extends Service {
 
-	private final Alarm alarm = new Alarm();
-	private Context context;
+	private Alarm alarm;
+	private Context appContext;
 	
 	
 	@Override
 	public void onCreate()
     {
         super.onCreate(); 
-        context = getApplicationContext();
-        alarm.setAlarm(context);
+        appContext = getApplicationContext();
+        alarm = new Alarm(appContext);
+        alarm.setAlarm(appContext);
     }
 
 	@Override
     public void onDestroy() {
         
-		alarm.cancelAlarm(context);
+		alarm.cancelAlarm(appContext);
         Toast.makeText(this, "Service stopped", Toast.LENGTH_SHORT).show();
     }
        

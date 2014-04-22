@@ -18,6 +18,9 @@
 	<string name="string_slide_to_change">Slide to start/stop</string>
 	<string name="string_connect_your_account">Please connect your account</string>
 	<string name="string_select_recipient">Please select one or more recipients</string>
+	<string name="string_auth_problem">Account authorization problem</string>
+	<string name="string_req_auth_problem">Application requests permission</string>
+	<string name="string_tap_to_open_app">Tap to open application</string>
 	<string name="mail_type_home">HOME</string>
     <string name="mail_type_work">WORK</string>
     <string name="mail_type_other">OTHER</string>

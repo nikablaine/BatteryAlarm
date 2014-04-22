@@ -14,7 +14,6 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.ContactsContract;
-import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
@@ -48,6 +47,8 @@ public class MainActivity extends Activity implements AsyncResult {
 	
 	private static final String DIALOG_NUMBER = "number";
 	
+	public static UserRecoverableAuthException authExc;
+	
 	public Context mContext = this;
 	
 	private SharedPreferences mPreferences;
@@ -72,7 +73,7 @@ public class MainActivity extends Activity implements AsyncResult {
 	TextView tvPercentage = null;
 	TextView tvSetPercentage = null;
 	TextView tvCustomMessages = null;
-	private TextView tvConnected;
+	//private TextView tvConnected;
 	
 	View batteryLevelView;
 	
@@ -96,7 +97,7 @@ public class MainActivity extends Activity implements AsyncResult {
 		batteryLevelView = (View) findViewById(R.id.linLayoutBatteryLevel);
 		tvSetPercentage = (TextView) findViewById(R.id.tvSetPercentage);
 		tvCustomMessages = (TextView) findViewById(R.id.tvCustomMessages);
-		tvConnected = (TextView) findViewById(R.id.tvConnected);
+		//tvConnected = (TextView) findViewById(R.id.tvConnected);
 		
 		
 
@@ -116,7 +117,7 @@ public class MainActivity extends Activity implements AsyncResult {
 		
 		setTVBatteryLevel();
 		
-		setTVConnectAccount();
+		//setTVConnectAccount();
 		
 		setSPNRAccnt();
 		
@@ -162,6 +163,17 @@ public class MainActivity extends Activity implements AsyncResult {
 		putPrefs();
 	}
 	
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+		
+		Intent intent = getIntent();
+		onNewIntent(intent);
+		
+	}
+
+	
 	@Override
 	protected void onSaveInstanceState (Bundle outState) {
 		super.onSaveInstanceState(outState);
@@ -173,6 +185,19 @@ public class MainActivity extends Activity implements AsyncResult {
 		if (contactList != null) {
 			outState.putSerializable(CONTACT_LIST, contactList);
 		}
+	}
+	
+	@Override
+	protected void onNewIntent(Intent intent) {
+		
+		boolean startAct = intent.getBooleanExtra(Alarm.REQ_AUTH, false);
+		
+		if (startAct) {
+			
+			UserRecoverableAuthException exception = authExc;
+			startActivityForResult(exception.getIntent(), REQUEST_AUTHORIZATION);
+		}
+	
 	}
 	
 	
@@ -216,10 +241,10 @@ public class MainActivity extends Activity implements AsyncResult {
 
 		if (requestCode == REQUEST_AUTHORIZATION) {
 			if (resultCode == Activity.RESULT_OK) {
-				data.getExtras();
+				/*data.getExtras();
 				GetTokenTask getTokenTask = new GetTokenTask(this);
 				getTokenTask.setDelegate(this);
-				getTokenTask.execute();
+				getTokenTask.execute();*/
 			}
 		}
 		
@@ -241,11 +266,11 @@ public class MainActivity extends Activity implements AsyncResult {
 			
 			if (isChecked) {
 				//check if token is activated
-				if (getAuthToken() == null){
+				/*if (getAuthToken() == null){
 					Toast.makeText(mContext, getResources().getString(R.string.string_connect_your_account), Toast.LENGTH_SHORT).show();
 					buttonView.setChecked(false);
 					return;
-				}
+				}*/
 				
 				//check if there is at least one recipient
 				if (getTextRecipient() == null){
@@ -309,7 +334,7 @@ public class MainActivity extends Activity implements AsyncResult {
 		}
 	};
 	
-	private OnClickListener onConnectListener = new OnClickListener() {
+	/*private OnClickListener onConnectListener = new OnClickListener() {
 		
 		@Override
 		public void onClick(View v) {
@@ -319,7 +344,7 @@ public class MainActivity extends Activity implements AsyncResult {
 			getTokenTask.execute(getTextSender());
 			
 		}
-	};
+	};*/
 	
 	private OnItemSelectedListener onAccountChangeListener = new OnItemSelectedListener() {
 
@@ -332,16 +357,15 @@ public class MainActivity extends Activity implements AsyncResult {
 				GoogleAuthUtil.invalidateToken(mContext, authToken);
 				setAuthToken(null);
 				putPrefs();
-				setTVConnectAccount();
 			}
 			
 		}
 
 		@Override
 		public void onNothingSelected(AdapterView<?> parent) {
-			// TODO Auto-generated method stub
-			
+			return;
 		}
+
 	};
 	
 	private void setSPNRAccnt() {
@@ -368,7 +392,7 @@ public class MainActivity extends Activity implements AsyncResult {
 		tvSetPercentage.setText("Currently is set to " + getAlarmBatteryLevel() + "%");
 	}
 	
-	private void setTVConnectAccount() {
+	/*private void setTVConnectAccount() {
 		
 		if (getAuthToken() == null) {
 			//initialize "connect button"
@@ -380,7 +404,7 @@ public class MainActivity extends Activity implements AsyncResult {
 			tvConnected.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
 		}
 		
-	}
+	}*/
 	
 	private void setSWServiceState() {
 		
@@ -452,8 +476,8 @@ public class MainActivity extends Activity implements AsyncResult {
 	};
 	
 	private void executeContactListLoaderTask() {
-		prgrBar.setVisibility(View.VISIBLE);
-		tvCustomMessages.setText("Loading contact list...");
+		//prgrBar.setVisibility(View.VISIBLE);
+		//tvCustomMessages.setText("Loading contact list...");
 		contactLoaderTask.delegate = this;
 		contactLoaderTask.execute();
 	}
@@ -475,8 +499,8 @@ public class MainActivity extends Activity implements AsyncResult {
 		//contact list stopped loading
 		
 		contactList = cntList;
-		prgrBar.setVisibility(View.INVISIBLE);
-		tvCustomMessages.setText("");
+		/*prgrBar.setVisibility(View.INVISIBLE);
+		tvCustomMessages.setText("");*/
 		
 		CustomContact[] contactsArray = new CustomContact[contactList.size()];
 		contactsArray = contactList.toArray(contactsArray);
@@ -484,19 +508,20 @@ public class MainActivity extends Activity implements AsyncResult {
 		setContactListAdapter();
 	}
 
+	/*
 	@Override
 	public void asyncTaskGetTokenStarted() {
 		prgrBar.setVisibility(View.VISIBLE);
 		tvCustomMessages.setText("Authorizating account...");
-	}
+	}*/
 
-	@Override
+	/*@Override
 	public void asyncTaskGetTokenFinished(String result, String text) {
 		prgrBar.setVisibility(View.INVISIBLE);
 		tvCustomMessages.setVisibility(View.INVISIBLE);
 		setAuthToken(result);
 		
-		setTVConnectAccount();
+		//setTVConnectAccount();
 
 		if (text != null) {
 			Toast.makeText(getApplicationContext(), text,
@@ -511,14 +536,10 @@ public class MainActivity extends Activity implements AsyncResult {
 		editor.putInt("AlarmValue", alarmBatteryLevel);
 		editor.putString("AuthToken", authToken);
 		editor.putBoolean("serviceShouldWork", true);
-		editor.commit();*/
+		editor.commit();
 		
-	}
+	}*/
 
-	@Override
-	public void asyncTaskGetTokenAuth(UserRecoverableAuthException exc) {
-		startActivityForResult(exc.getIntent(), REQUEST_AUTHORIZATION);
-	}
 	
 	@Override
 	public void numPickerFragmentAlarmValueChosen(int value) {
@@ -559,6 +580,16 @@ public class MainActivity extends Activity implements AsyncResult {
 
 	public void setAuthToken(String authToken) {
 		this.authToken = authToken;
+	}
+
+
+	public static UserRecoverableAuthException getAuthExc() {
+		return authExc;
+	}
+
+
+	public static void setAuthExc(UserRecoverableAuthException authExc) {
+		MainActivity.authExc = authExc;
 	}
 	
 	
